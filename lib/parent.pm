@@ -1,26 +1,34 @@
 package parent;
+
 use strict;
-use vars qw($VERSION);
-$VERSION = '0.236';
+use warnings;
+
+use MOP ();
+
+our $VERSION = '0.3';
 
 sub import {
-    my $class = shift;
+    shift;
+    my $meta   = MOP::Class->new( scalar caller(0) );
+    my @supers = @_;
 
-    my $inheritor = caller(0);
-
-    if ( @_ and $_[0] eq '-norequire' ) {
-        shift @_;
+    if ( @supers and $supers[0] eq '-norequire' ) {
+        shift @supers;
     } else {
-        for ( my @filename = @_ ) {
+        # make a copy of @supers, othewise the
+        # s/// will end up in @ISA :)
+        for ( my @filenames = @supers ) {
             s{::|'}{/}g;
             require "$_.pm"; # dies if the file is not found
         }
     }
 
-    {
-        no strict 'refs';
-        push @{"$inheritor\::ISA"}, @_; # dies if a loop is detected
-    };
+    unshift @supers, $meta->superclasses;
+
+    #use Data::Dumper;
+    #warn Dumper \@supers;
+
+    $meta->set_superclasses( @supers ) if @supers;
 };
 
 1;
